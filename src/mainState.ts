@@ -1,4 +1,7 @@
 /// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/>
+/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
+
+import {sprintf} from "sprintf-js";
 
 class MainState extends Phaser.State {
     // 足場グループ
@@ -9,6 +12,9 @@ class MainState extends Phaser.State {
     cursors: Phaser.CursorKeys;
     // 入力：スペースバー
     spaceBar: Phaser.Key;
+
+    // 文字列：登った高さ
+    climbHeightText: Phaser.Text;
 
     // 登った距離
     climbHeight: number;
@@ -51,6 +57,12 @@ class MainState extends Phaser.State {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceBar   = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
+        // 文字列関係初期化
+        this.climbHeightText    = this.add.text(10, 10, "", {
+            font:   "20px Arial",
+            fill: "#ffffff",
+        });
+
         // メタデータ初期化
         this.isJumping  = false;
         this.climbHeight    = 0;
@@ -64,6 +76,8 @@ class MainState extends Phaser.State {
         this.placeStep(0, this.world.width, this.world.height, 1);
         this.placeClimbSteps(this.climbHeight);
 
+        // 登った高さ表示
+        this.showHeight();
 
     }
 
@@ -114,6 +128,8 @@ class MainState extends Phaser.State {
             //this.steps.y    += offsetY;
             //this.steps.addAll('y', offsetY);
             this.steps.setAll("y", offsetY, false, false, 1);
+            // 登った高さ更新
+            this.showHeight();
         }
 
         ////////////
@@ -181,6 +197,11 @@ class MainState extends Phaser.State {
         }
 
         this.placedHeight   = currentHeight + this.placeInterval;
+    }
+
+    // 登った高さ表示
+    showHeight() {
+        this.climbHeightText.setText(`${sprintf("%.2f", this.climbHeight / 100)} M`);
     }
 }
 
