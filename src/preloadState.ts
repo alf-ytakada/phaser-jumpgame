@@ -11,6 +11,9 @@ class PreloadState extends Phaser.State {
         // キャラ
         this.load.spritesheet(`chara1`, `images/pipo-halloweenchara2016_25.png`, 32, 32);
         this.load.spritesheet(`chara2`, `images/pipo-halloweenchara2016_26.png`, 32, 32);
+
+        // ボタン
+        this.load.image("button1", "images/pipo-WindowBaseSet3b_02.png");
     }
 
     create() {

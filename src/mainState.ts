@@ -1,5 +1,4 @@
-/// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/>
-/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
+/// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
 
 import {sprintf} from "sprintf-js";
 
@@ -12,9 +11,19 @@ class MainState extends Phaser.State {
     cursors: Phaser.CursorKeys;
     // 入力：スペースバー
     spaceBar: Phaser.Key;
+    // 入力：Rキー
+    rKey: Phaser.Key;
+
+    // データハッシュ
+    data : {
+        // 資金
+        money : number;
+    };
 
     // 文字列：登った高さ
     climbHeightText: Phaser.Text;
+    // 文字列：資金
+    moneyText: Phaser.Text;
 
     // 登った距離
     climbHeight: number;
@@ -32,8 +41,17 @@ class MainState extends Phaser.State {
     // init() -> preload() -> create()の順に呼び出され、
     // update()がメインループとなる
 
-    init() {
+    // state 呼び出し時の引数が渡される
+    init(data? : any) {
         console.log("init()");
+        if (data) {
+            this.data   = data;
+        }
+        else {
+            this.data   = {
+               money : 0,
+            };
+        }
     }
 
     // おもにリソースファイルのダウンロードを行う
@@ -46,6 +64,7 @@ class MainState extends Phaser.State {
         console.log("create()");
         // 物理演算を有効化
         this.game.physics.startSystem(Phaser.Physics.ARCADE);
+        this.game.physics.arcade.checkCollision.down  = false;
         //this.game.physics.arcade.gravity.y  = 300;
 
         // キャラクターロード
@@ -56,37 +75,73 @@ class MainState extends Phaser.State {
         // キー入力
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceBar   = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
+        this.rKey    = this.input.keyboard.addKey(Phaser.Keyboard.R);
 
         // 文字列関係初期化
         this.climbHeightText    = this.add.text(10, 10, "", {
-            font:   "20px Arial",
+            font: "20px Arial",
+            fill: "#ffffff",
+        });
+        this.moneyText    = this.add.text(this.world.centerX + 10, 10, "", {
+            font: "20px Arial",
             fill: "#ffffff",
         });
 
-        // メタデータ初期化
-        this.isJumping  = false;
-        this.climbHeight    = 0;
-        this.placeInterval  = 150; // px
-        this.placedHeight   = -1;
-        this.climbHeight    = 0;
-
-        // 初期床を配置
+        // 床グループ生成
         this.steps  = this.add.group();
         this.steps.enableBody   = true;
-        this.placeStep(0, this.world.width, this.world.height, 1);
-        this.placeClimbSteps(this.climbHeight);
+        // その他初期化
+        this.reset();
 
         // 登った高さ表示
         this.showHeight();
 
+        // 現在の資金表示
+        this.showMoney();
     }
 
     // メインループ
     update() {
         //console.log("update()");
+        // 死亡済み
+        if (this.player.alive == false) {
+            this.updateWhenDead();
+            return;
+        }
+        else {
+            this.updateWhenAlive();
+            return;
+        }
+    }
+
+    // プレイヤー生存時
+    updateWhenAlive() {
         ////////////
         // 衝突判定
         this.physics.arcade.collide(this.player, this.steps, this.onCollideStep, null, this);
+
+        // 死亡判定
+        if (this.player.y > this.world.height) {
+            // 画面外に落ちた
+            this.player.alive   = false;
+            const reward        = Math.floor(this.climbHeight / 10);
+            this.data.money += reward;
+
+            // 結果ダイアログ生成
+            let dialog  = this.createResultDialog(this.game, {
+                climbHeight : sprintf("%.2f", this.climbHeight / 100),
+                reward      : reward,
+                state       : this,
+                onRetryClicked  : () => { console.log("retry clicked");},
+            });
+            dialog.x    = (this.world.width - dialog.width)/2;
+            dialog.y    = (this.world.height - dialog.height)/2;
+            console.log(`width : ${dialog.width}, height : ${dialog.height}`);
+            // ちょっとあとにダイアログを開く
+            setTimeout(() => {
+                this.game.world.addChild(dialog);
+            }, 500);
+        }
 
         ////////////
         // 入力判定
@@ -133,6 +188,37 @@ class MainState extends Phaser.State {
         }
 
         ////////////
+    }
+
+    // プレイヤー死亡時のupdate()
+    updateWhenDead() {
+        // ダイアログ処理
+        if (this.rKey.isDown) {
+            // ゲーム初期化して最初から
+           // this.reset();
+            this.game.state.start("mainState", true, false, this.data);
+        }
+    }
+
+    ////////////////////////////////////
+    //  その他メソッド
+    ////////////////////////////////////
+
+    reset() {
+        this.steps.removeAll(true);
+        this.player.alive   = true;
+
+        // メタデータ初期化
+        this.isJumping  = false;
+        this.climbHeight    = 0;
+        this.placeInterval  = 150; // px
+        this.placedHeight   = -1;
+        this.climbHeight    = 0;
+
+        // 初期床を配置
+        this.placeStep(0, this.world.width, this.world.height, 1);
+        this.placeClimbSteps(this.climbHeight);
+
     }
 
     onCollideStep(player : Phaser.Sprite, step : Phaser.Sprite) {
@@ -203,6 +289,47 @@ class MainState extends Phaser.State {
     showHeight() {
         this.climbHeightText.setText(`${sprintf("%.2f", this.climbHeight / 100)} M`);
     }
+
+    // 資金表示
+    showMoney() {
+        this.moneyText.setText(`${sprintf("%d", this.data.money)} G`);
+    }
+
+    // 結果ダイアログ作成
+    createResultDialog(game : Phaser.Game, conf : any) : Phaser.Graphics {
+        // 枠
+        let graphics    = game.make.graphics();
+        graphics.lineStyle(10, 0xffffff);
+        graphics.beginFill(0x999999);
+        graphics.drawRect(
+            0, 0,
+            game.world.width - game.world.width / 4, 
+            game.world.height - game.world.height / 2
+        );
+
+        // テキスト
+        const style     = {
+            font    : "bold 24px Arial",
+            fill    : "#222",
+        };
+        let scoreText   = game.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
+        graphics.addChild(scoreText);
+
+        let rewardText  = game.make.text(10, 40, `獲得賞金 : ${conf.reward}`, style);
+        graphics.addChild(rewardText);
+
+
+        // ボタン(TODO)
+        //let button  = game.make.button(graphics.width / 2, 100, "button1", conf.onRetryClicked, conf.state);
+        //button.anchor.setTo(0.5, 0.5);
+        //button.
+
+        //let retSprite   = game.make.sprite(0, 0, graphics.generateTexture());
+        //graphics.destroy();
+        //return retSprite;
+        return graphics;
+    }
+
 }
 
 export {MainState};
