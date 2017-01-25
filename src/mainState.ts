@@ -13,6 +13,8 @@ class MainState extends Phaser.State {
     spaceBar: Phaser.Key;
     // 入力：Rキー
     rKey: Phaser.Key;
+    // 入力：Sキー
+    sKey: Phaser.Key;
 
     // データハッシュ
     data : {
@@ -21,8 +23,10 @@ class MainState extends Phaser.State {
     };
 
     // 文字列：登った高さ
+    climbHeightTextLayer: Phaser.Sprite;
     climbHeightText: Phaser.Text;
     // 文字列：資金
+    moneyTextLayer: Phaser.Sprite;
     moneyText: Phaser.Text;
 
     // 登った距離
@@ -76,16 +80,43 @@ class MainState extends Phaser.State {
         this.cursors = this.input.keyboard.createCursorKeys();
         this.spaceBar   = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
         this.rKey    = this.input.keyboard.addKey(Phaser.Keyboard.R);
+        this.sKey    = this.input.keyboard.addKey(Phaser.Keyboard.S);
 
+        ///////////////////
         // 文字列関係初期化
-        this.climbHeightText    = this.add.text(10, 10, "", {
+        let graphics   = this.make.graphics(0, 0);
+        graphics.lineStyle(1, 0xffffff)
+            .beginFill(0x999999)
+            .drawRect(
+                0, 0,
+                100, 30
+            );
+        this.climbHeightTextLayer   = this.add.sprite(0, 0, graphics.generateTexture());
+        this.climbHeightText    = this.add.text(5, 5, "", {
             font: "20px Arial",
             fill: "#ffffff",
         });
-        this.moneyText    = this.add.text(this.world.centerX + 10, 10, "", {
+        this.climbHeightTextLayer.addChild(this.climbHeightText);
+        graphics.destroy();
+
+        graphics    = this.make.graphics();
+        graphics.lineStyle(1, 0xffffff)
+            .beginFill(0x999999)
+            .drawRect(
+                0, 0,
+                100, 30
+            );
+        let grp = this.add.group();
+        this.moneyTextLayer = this.add.sprite(this.world.width, 0, graphics.generateTexture());
+        this.moneyTextLayer.anchor.setTo(1, 0);
+        this.moneyText    = this.add.text(0, 5, "", {
             font: "20px Arial",
             fill: "#ffffff",
         });
+        this.moneyTextLayer.addChild(this.moneyText);
+        this.moneyText.anchor.setTo(1, 0);
+        graphics.destroy();
+        ///////////////////
 
         // 床グループ生成
         this.steps  = this.add.group();
@@ -197,6 +228,10 @@ class MainState extends Phaser.State {
             // ゲーム初期化して最初から
            // this.reset();
             this.game.state.start("mainState", true, false, this.data);
+        }
+        else if (this.sKey.isDown) {
+            // ショップへ
+            this.game.state.start("shopState", true, false, this.data);
         }
     }
 
@@ -315,8 +350,14 @@ class MainState extends Phaser.State {
         let scoreText   = game.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
         graphics.addChild(scoreText);
 
-        let rewardText  = game.make.text(10, 40, `獲得賞金 : ${conf.reward}`, style);
+        let rewardText  = game.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
         graphics.addChild(rewardText);
+
+        let retryText   = game.make.text(10, 100, `R key : 再挑戦`, style);
+        graphics.addChild(retryText);
+
+        let shopText    = game.make.text(10, 150, `S key : ショップ`, style);
+        graphics.addChild(shopText);
 
 
         // ボタン(TODO)
