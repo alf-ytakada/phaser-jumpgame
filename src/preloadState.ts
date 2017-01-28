@@ -1,5 +1,7 @@
 /// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/>
 
+import {ShopItemDefs} from "./shopItemDefs";
+
 // 素材をロードする状態
 class PreloadState extends Phaser.State {
 
@@ -14,10 +16,16 @@ class PreloadState extends Phaser.State {
 
         // ボタン
         this.load.image("button1", "images/pipo-WindowBaseSet3b_02.png");
+
+        // アイテム
+        for (let item of ShopItemDefs) {
+            this.load.image(item.key, item.resource);
+        }
     }
 
     create() {
-        this.game.state.start("mainState");
+        //this.game.state.start("mainState");
+        this.game.state.start("shopState");
     }
 
 }

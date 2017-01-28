@@ -19,7 +19,8 @@ class MainState extends Phaser.State {
     // データハッシュ
     data : {
         // 資金
-        money : number;
+        money : number,
+        item  : {}
     };
 
     // 文字列：登った高さ
@@ -54,6 +55,7 @@ class MainState extends Phaser.State {
         else {
             this.data   = {
                money : 0,
+               item : {}
             };
         }
     }
