@@ -24,7 +24,7 @@ const ShopItemDefs : [ItemDef] = [
         description : "ジャンプ力が増加",
         price       : 1000,
         incremental : 500,
-        maxLevel    : 10,
+        maxLevel    : 30,
     },
     {
         id  : 2,

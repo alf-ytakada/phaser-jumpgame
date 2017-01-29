@@ -184,7 +184,8 @@ class MainState extends Phaser.State {
         }
 
         if (this.spaceBar.isDown && this.isJumping == false) {
-            this.player.body.velocity.y  = -450;
+            let vel     = -450  -this.data.item["ring"] * 100;
+            this.player.body.velocity.y  = vel;
             this.player.animations.play("jump");
             this.isJumping  = true;
         }
@@ -203,11 +204,15 @@ class MainState extends Phaser.State {
             const offsetY : number  = this.world.centerY - this.player.y;
             this.climbHeight+= offsetY;
             this.player.y   = this.world.centerY;
-            //this.steps.y    += offsetY;
-            //this.steps.addAll('y', offsetY);
             this.steps.setAll("y", offsetY, false, false, 1);
             // 登った高さ更新
             this.showHeight();
+            // 適当なところでstepを削除
+            for (let step of this.steps.children) {
+                if (! step.visible) {
+                    this.steps.remove(step, true);
+                }
+            }
         }
 
         ////////////
@@ -224,7 +229,7 @@ class MainState extends Phaser.State {
         else if (this.sKey.isDown) {
             // ショップへ
             // test
-            this.data.money += 10000;
+            this.data.money += 100000;
             this.game.state.start("shopState", true, false, this.data);
         }
     }

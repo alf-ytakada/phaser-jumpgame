@@ -72,7 +72,6 @@ class ShopState extends Phaser.State {
         sprite.addChild(text);
 
         // アイテム一覧
-        //for (let item of ShopItemDefs) {
         for (let i = 0 ; i < ShopItemDefs.length ; i++) {
             const item  = ShopItemDefs[i];
             let itemSprite  = this.createItemRow(item);
@@ -116,10 +115,11 @@ class ShopState extends Phaser.State {
         sprite.addChild(descText);
 
         // Lvテキスト
-        let lvText    = this.make.text(
+        const lv    = this.data.item[itemDef.key];
+        let lvText  = this.make.text(
             this.boxWidth - this.buyWidth - 100,
             itemText.y,
-            "Lv: " + this.data.item[itemDef.key],
+            "Lv: " + ((lv >= itemDef.maxLevel) ? "MAX" : lv),
             style
         );
         sprite.addChild(lvText);
@@ -136,6 +136,9 @@ class ShopState extends Phaser.State {
             fill    : "#F7a",
         };
         let text    = this.make.text(5, 5, ItemDef.leveledPrice(itemDef, this.data.item[itemDef.key]) + "G", style);
+        if (lv == itemDef.maxLevel) {
+            text.text   = "---";
+        }
         buySprite.addChild(text);
         sprite.addChild(buySprite);
         // 購入ボタンタップ時
