@@ -1,6 +1,7 @@
 /// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/>
 
 import {ShopItemDefs, ItemDef} from "./shopItemDefs";
+import {Common} from "./common";
 
 // 素材をロードする状態
 class ShopState extends Phaser.State {
@@ -19,13 +20,20 @@ class ShopState extends Phaser.State {
     // 購入枠の幅
     readonly buyWidth   : number = 60;
 
+    // shop sprite
+    shopSprite  : Phaser.Sprite;
+
+    // 所持金テキスト
+    moneyText   : Phaser.Text;
+
     // state 初期化　引数を保存する
     init(data : any) {
         this.data   = data;
         this.headerHeight   = 30;
         this.boxWidth  = this.stage.width - 40;
-        this.boxHeight = this.stage.height - 100;
-        this.marginTop = (this.stage.height - this.boxHeight) / 2;
+        this.boxHeight = this.headerHeight + this.itemHeight * ShopItemDefs.length;
+        //this.marginTop = (this.stage.height - this.boxHeight) / 2;
+        this.marginTop = 100;
         this.marginLeft = (this.stage.width - this.boxWidth) / 2;
     }
     preload() {
@@ -34,10 +42,16 @@ class ShopState extends Phaser.State {
     // ゲームオブジェクト初期化
     create() {
         this.drawShop();
+        this.drawMenu();
+        this.moneyText  = Common.addMoneySprite(this.game);
+        this.updateMoneyText();
     }
 
     // ショップを描画
     drawShop() {
+        if (this.shopSprite) {
+            this.shopSprite.destroy();
+        }
         // UI作成
         let graphics    = this.make.graphics();
         graphics.lineStyle(1, 0xffffff);
@@ -65,6 +79,7 @@ class ShopState extends Phaser.State {
             itemSprite.y    = this.headerHeight + (i * this.itemHeight);
             sprite.addChild(itemSprite);
         }
+        this.shopSprite = sprite;
     }
 
     createItemRow(itemDef : ItemDef) : Phaser.Sprite {
@@ -107,6 +122,7 @@ class ShopState extends Phaser.State {
             "Lv: " + this.data.item[itemDef.key],
             style
         );
+        sprite.addChild(lvText);
 
         // 購入ボタン
         graphics    = this.make.graphics();
@@ -122,8 +138,8 @@ class ShopState extends Phaser.State {
         let text    = this.make.text(5, 5, ItemDef.leveledPrice(itemDef, this.data.item[itemDef.key]) + "G", style);
         buySprite.addChild(text);
         sprite.addChild(buySprite);
-        sprite.inputEnabled = true;
         // 購入ボタンタップ時
+        sprite.inputEnabled = true;
         sprite.events.onInputDown.add(this.onBuyTouched, this, 0, itemDef);
         sprite.input.useHandCursor  = true;
 
@@ -137,7 +153,7 @@ class ShopState extends Phaser.State {
         if (this.data.item[itemDef.key] == null) {
             return;
         }
-        if (itemDef.maxLevel <= this.data.item[itemDef.key].lv) {
+        if (itemDef.maxLevel <= this.data.item[itemDef.key]) {
             return;
         }
         const price = ItemDef.leveledPrice(itemDef, this.data.item[itemDef.key]);
@@ -147,8 +163,43 @@ class ShopState extends Phaser.State {
         }
 
         // 一回UI消去して再描画
-        this.world.removeAll();
         this.drawShop();
+        this.updateMoneyText();
+    }
+
+    // 下部メニュー描画
+    drawMenu() {
+        let graphics    = this.make.graphics();
+        graphics.lineStyle(1, 0xCCCCCC);
+        graphics.beginFill(0xaaaaaa);
+        graphics.drawRect(0, 0, this.boxWidth, this.itemHeight);
+        graphics.endFill();
+
+        let sprite  = this.add.sprite(
+            this.marginLeft, this.marginTop + this.boxHeight + 50, graphics.generateTexture()
+        );
+
+        let style   = {
+            font    : "bold 22px Arial",
+            fill    : "#000000",
+        };
+        let text    = this.make.text(sprite.width / 2, sprite.height / 2, "次の日へ進む", style);
+        text.anchor.setTo(0.5);
+        sprite.addChild(text);
+
+        // タップ時処理
+        sprite.inputEnabled = true;
+        sprite.events.onInputDown.add(this.onNextDayTouched, this, 0);
+        sprite.input.useHandCursor  = true;
+    }
+
+    // 次の日へボタン
+    onNextDayTouched() {
+        this.game.state.start("mainState", true, false, this.data);
+    }
+
+    updateMoneyText() {
+        this.moneyText.text = `${this.data.money} G`;
     }
 }
 

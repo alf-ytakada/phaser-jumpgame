@@ -2,6 +2,7 @@
 
 import {sprintf} from "sprintf-js";
 import {ShopItemDefs} from "./shopItemDefs";
+import {Common} from "./common";
 
 class MainState extends Phaser.State {
     // 足場グループ
@@ -105,23 +106,8 @@ class MainState extends Phaser.State {
         this.climbHeightTextLayer.addChild(this.climbHeightText);
         graphics.destroy();
 
-        graphics    = this.make.graphics();
-        graphics.lineStyle(1, 0xffffff)
-            .beginFill(0x999999)
-            .drawRect(
-                0, 0,
-                100, 30
-            );
-        let grp = this.add.group();
-        this.moneyTextLayer = this.add.sprite(this.world.width, 0, graphics.generateTexture());
-        this.moneyTextLayer.anchor.setTo(1, 0);
-        this.moneyText    = this.add.text(0, 5, "", {
-            font: "20px Arial",
-            fill: "#ffffff",
-        });
-        this.moneyTextLayer.addChild(this.moneyText);
-        this.moneyText.anchor.setTo(1, 0);
-        graphics.destroy();
+        // 所持金表示
+        this.moneyText  = Common.addMoneySprite(this.game);
         ///////////////////
 
         // 床グループ生成
