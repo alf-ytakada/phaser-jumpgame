@@ -1,6 +1,7 @@
 /// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
 
 import {sprintf} from "sprintf-js";
+import {ShopItemDefs} from "./shopItemDefs";
 
 class MainState extends Phaser.State {
     // 足場グループ
@@ -20,7 +21,7 @@ class MainState extends Phaser.State {
     data : {
         // 資金
         money : number,
-        item  : {}
+        item  : any
     };
 
     // 文字列：登った高さ
@@ -57,6 +58,9 @@ class MainState extends Phaser.State {
                money : 0,
                item : {}
             };
+            for (let item of ShopItemDefs) {
+                this.data.item[item.key]    = 0;
+            }
         }
     }
 
@@ -233,6 +237,8 @@ class MainState extends Phaser.State {
         }
         else if (this.sKey.isDown) {
             // ショップへ
+            // test
+            this.data.money += 10000;
             this.game.state.start("shopState", true, false, this.data);
         }
     }

@@ -24,8 +24,8 @@ class PreloadState extends Phaser.State {
     }
 
     create() {
-        //this.game.state.start("mainState");
-        this.game.state.start("shopState");
+        this.game.state.start("mainState");
+        //this.game.state.start("shopState");
     }
 
 }

@@ -1,6 +1,6 @@
 
 // ショップで販売するアイテムの定義
-interface Item {
+class ItemDef {
     id  : number;
     key : string;
     resource    : string;
@@ -9,9 +9,13 @@ interface Item {
     price       : number;
     incremental : number;
     maxLevel    : number;
+
+    static leveledPrice(item : ItemDef, lv : number) : number {
+        return item.price + lv * item.incremental;
+    }
 };
 
-const ShopItemDefs : [Item] = [
+const ShopItemDefs : [ItemDef] = [
     {
         id  : 1,
         key : "ring",
@@ -45,4 +49,4 @@ const ShopItemDefs : [Item] = [
 ];
 
 
-export {ShopItemDefs, Item};
+export {ShopItemDefs, ItemDef};
