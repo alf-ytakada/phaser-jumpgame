@@ -80,7 +80,7 @@ class MainState extends Phaser.State {
 
         // キャラクターロード
         this.player = this.loadPlayer("chara1");
-        this.player.body.gravity.y  = 500;
+        this.player.body.gravity.y  = 500 - this.data.item["cloak"] * 20;
         this.player.body.collideWorldBounds = true;
 
         // キー入力
@@ -208,9 +208,11 @@ class MainState extends Phaser.State {
             // 登った高さ更新
             this.showHeight();
             // 適当なところでstepを削除
-            for (let step of this.steps.children) {
-                if (! step.visible) {
-                    this.steps.remove(step, true);
+            if (this.climbHeight % 100 == 0) {
+                for (let step of this.steps.children) {
+                    if (! step.visible) {
+                        this.steps.remove(step, true);
+                    }
                 }
             }
         }
@@ -246,13 +248,14 @@ class MainState extends Phaser.State {
         this.isJumping  = false;
         this.climbHeight    = 0;
         this.placeInterval  = 150; // px
-        this.placedHeight   = -1;
+        this.placedHeight   = -this.stage.height;
         this.climbHeight    = 0;
 
         // 初期床を配置
         this.placeStep(0, this.world.width, this.world.height, 1);
-        this.placeClimbSteps(this.climbHeight);
-
+        for (let h = -this.stage.height + this.placeInterval ; h < 0 ; h++) {
+            this.placeClimbSteps(h);
+        }
     }
 
     onCollideStep(player : Phaser.Sprite, step : Phaser.Sprite) {
@@ -294,27 +297,17 @@ class MainState extends Phaser.State {
             return;
         }
 
-        // 初回
-        if (this.placedHeight < 0) {
-            for (let height = this.world.height - this.placedHeight - this.placeInterval
-                ; height > 0
-                ; height -= this.placeInterval) 
-            {
-                // 幅はランダムに
-                const stepWidth = this.rnd.integerInRange(this.stage.width / 6, this.stage.width / 2);
-                // 置き始める座標
-                const stepLeftX = this.rnd.integerInRange(0, this.stage.width - stepWidth);
-                this.placeStep(stepLeftX, stepLeftX + stepWidth, height, 2);
-            }
+        // 幅はランダムに
+        const stepWidth = this.rnd.integerInRange(this.stage.width / 6, this.stage.width / 2);
+        // 置き始める座標
+        const stepLeftX = this.rnd.integerInRange(0, this.stage.width - stepWidth);
+        // 置くy座標
+        let placeY      = 0;
+        if (currentHeight < 0) {
+            placeY      =  -currentHeight;
         }
-        else {
-                // 幅はランダムに
-                const stepWidth = this.rnd.integerInRange(this.stage.width / 6, this.stage.width / 2);
-                // 置き始める座標
-                const stepLeftX = this.rnd.integerInRange(0, this.stage.width - stepWidth);
-                this.placeStep(stepLeftX, stepLeftX + stepWidth, 0, 2);
-                console.log(`stepWidth:${stepWidth}, stepLeftX:${stepLeftX}`);
-        }
+        this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY, 2);
+        console.log(`stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
 
         this.placedHeight   = currentHeight + this.placeInterval;
     }

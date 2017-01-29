@@ -34,7 +34,7 @@ const ShopItemDefs : [ItemDef] = [
         description : "落下速度が減少",
         price       : 500,
         incremental : 300,
-        maxLevel    : 10,
+        maxLevel    : 15,
     },
     {
         id  : 3,
