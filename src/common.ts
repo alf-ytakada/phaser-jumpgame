@@ -24,6 +24,19 @@ class Common {
 
         return moneyText;
     }
+
+    // 単色ボタンの生成
+    static createButton(game : Phaser.Game, width: number, height: number, color: number) : Phaser.Sprite {
+        let graphics   = game.make.graphics();
+        graphics.beginFill(color);
+        graphics.drawRect(0, 0, width, height);
+        graphics.endFill();
+        let sprite     = game.make.sprite(0, 0, graphics.generateTexture());
+        sprite.inputEnabled = true;
+        sprite.input.useHandCursor  = true;
+
+        return sprite;
+    }
 }
 
 

@@ -323,16 +323,17 @@ class MainState extends Phaser.State {
     }
 
     // 結果ダイアログ作成
-    createResultDialog(game : Phaser.Game, conf : any) : Phaser.Graphics {
+    createResultDialog(game : Phaser.Game, conf : any) : Phaser.Sprite {
         // 枠
         let graphics    = game.make.graphics();
-        graphics.lineStyle(10, 0xffffff);
-        graphics.beginFill(0x999999);
+        graphics.lineStyle(5, 0x666666);
+        graphics.beginFill(0xaaaaaa);
         graphics.drawRect(
             0, 0,
             game.world.width - game.world.width / 4, 
-            game.world.height - game.world.height / 2
+            game.world.height - game.world.height / 4 
         );
+        let sprite  = this.make.sprite(0, 0, graphics.generateTexture());
 
         // テキスト
         const style     = {
@@ -340,27 +341,40 @@ class MainState extends Phaser.State {
             fill    : "#222",
         };
         let scoreText   = game.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
-        graphics.addChild(scoreText);
+        sprite.addChild(scoreText);
 
         let rewardText  = game.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
-        graphics.addChild(rewardText);
+        sprite.addChild(rewardText);
 
-        let retryText   = game.make.text(10, 100, `R key : 再挑戦`, style);
-        graphics.addChild(retryText);
+        // ボタンの縦横幅
+        const buttonWidth   = sprite.width / 1.5;
+        const buttonHeight  = sprite.height / 10;
+        
+        //// リトライボタン
+        let retryButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xcccccc);
+        retryButton.x   = (sprite.width - retryButton.width) / 2;
+        retryButton.y   = 100;
+        let retryText   = game.make.text(retryButton.width/2, retryButton.height/2, `R key : 再挑戦`, style);
+        retryText.anchor.setTo(0.5);
+        retryButton.addChild(retryText);
+        retryButton.events.onInputDown.add(() => {
+            this.game.state.start("mainState", true, false, this.data);
+        }, this, 0);
+        sprite.addChild(retryButton);
 
-        let shopText    = game.make.text(10, 150, `S key : ショップ`, style);
-        graphics.addChild(shopText);
+        //// ショップボタン
+        let shopButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xffcccc);
+        shopButton.x   = (sprite.width - shopButton.width) / 2;
+        shopButton.y   = 170;
+        let shopText   = game.make.text(shopButton.width/2, shopButton.height/2, `ショップへ`, style);
+        shopText.anchor.setTo(0.5);
+        shopButton.addChild(shopText);
+        shopButton.events.onInputDown.add(() => {
+            this.game.state.start("shopState", true, false, this.data);
+        }, this, 0);
+        sprite.addChild(shopButton);
 
-
-        // ボタン(TODO)
-        //let button  = game.make.button(graphics.width / 2, 100, "button1", conf.onRetryClicked, conf.state);
-        //button.anchor.setTo(0.5, 0.5);
-        //button.
-
-        //let retSprite   = game.make.sprite(0, 0, graphics.generateTexture());
-        //graphics.destroy();
-        //return retSprite;
-        return graphics;
+        return sprite;
     }
 
 }
