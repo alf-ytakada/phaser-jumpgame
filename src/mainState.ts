@@ -2,6 +2,7 @@
 
 import {sprintf} from "sprintf-js";
 import {ShopItemDefs} from "./shopItemDefs";
+import {StepDefs, StepDef, StepEffect} from "./stepDefs";
 import {Common} from "./common";
 
 class MainState extends Phaser.State {
@@ -20,9 +21,9 @@ class MainState extends Phaser.State {
 
     // データハッシュ
     data : {
-        // 資金
-        money : number,
-        item  : any
+        money   : number,   // 資金
+        item    : any,      // アイテムハッシュ
+        day     : number,   // 日数
     };
 
     // 文字列：登った高さ
@@ -53,11 +54,13 @@ class MainState extends Phaser.State {
         console.log("init()");
         if (data) {
             this.data   = data;
+            this.data.day++;
         }
         else {
             this.data   = {
                money : 0,
-               item : {}
+               item : {},
+               day  : 1,
             };
             for (let item of ShopItemDefs) {
                 this.data.item[item.key]    = 0;
@@ -184,8 +187,11 @@ class MainState extends Phaser.State {
         }
 
         if (this.spaceBar.isDown && this.isJumping == false) {
-            let vel     = -450  -this.data.item["ring"] * 100;
-            this.player.body.velocity.y  = vel;
+            let vel     = this.calcJumpVelocity(this.data.item["ring"]);
+            // 上に登るので、負の値となる。ので、現在の速度が新速度より大きければ、新しい速度に更新する
+            if (this.player.body.velocity.y > vel) {
+                this.player.body.velocity.y  = vel;
+            }
             this.player.animations.play("jump");
             this.isJumping  = true;
         }
@@ -252,15 +258,32 @@ class MainState extends Phaser.State {
         this.climbHeight    = 0;
 
         // 初期床を配置
-        this.placeStep(0, this.world.width, this.world.height, 1);
+        this.placeStep(0, this.world.width, this.world.height, "stepStart");
         for (let h = -this.stage.height + this.placeInterval ; h < 0 ; h++) {
             this.placeClimbSteps(h);
         }
     }
 
+    // 床衝突時の処理
     onCollideStep(player : Phaser.Sprite, step : Phaser.Sprite) {
         this.player.animations.stop("jump");
         this.isJumping   = false;
+        if (step.data.length == 0) {
+            return;
+        }
+        for (let effect of step.data) {
+            // ジャンプ床
+            if (effect === StepEffect.SpeedUp) {
+                this.player.body.velocity.y = 3 * this.calcJumpVelocity(this.data.item["ring"]);
+            }
+
+            // お金床
+            if (effect === StepEffect.Money) {
+                this.data.money += this.data.day * 100;
+                this.showMoney();
+            }
+        }
+        step.data   = [];
     }
 
     loadPlayer(spriteName : string) : Phaser.Sprite {
@@ -276,20 +299,44 @@ class MainState extends Phaser.State {
     }
 
     //　床配置
-    placeStep(leftX : number, rightX : number, y : number, stepNumber: number)  : void {
+    placeStep(leftX : number, rightX : number, y : number, stepKey? : string)  : void {
         let posX    = leftX;
         do {
-            let step : Phaser.Sprite    = this.steps.create(posX, y, `step${stepNumber}`);
+            // 指定がなければランダム選択
+            let stepDef = this.choiceStep(stepKey);
+            let step : Phaser.Sprite    = this.steps.create(posX, y, stepDef.key);
+            step.data   = stepDef.effect;
             step.anchor.setTo(0.5, 0.5);
             step.outOfBoundsKill    = true;
             step.checkWorldBounds   = true;
             step.body.immovable = true;
             step.body.checkCollision.down   = false;
-            //step.
             posX    += step.width;
+
         } while(posX <= rightX);
     }
 
+    // 床を選択 指定がなければランダム
+    choiceStep(stepKey? :string) : StepDef {
+        if (stepKey) {
+            return (StepDefs.map((step) => {
+                if (step.key === stepKey) { 
+                    return step;
+                }
+            }))[0];
+        }
+        let rndMax  = 0;
+        for (let step of StepDefs) {
+            rndMax  += step.rate;
+        }
+        for (let step of StepDefs) {
+            if (this.rnd.realInRange(0, rndMax) < step.rate) {
+                return step;
+            }
+            rndMax  -= step.rate;
+        }
+        throw "oops, cannot find proper step!";
+    }
 
     // 上り床配置
     placeClimbSteps(currentHeight: number) {
@@ -306,10 +353,15 @@ class MainState extends Phaser.State {
         if (currentHeight < 0) {
             placeY      =  -currentHeight;
         }
-        this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY, 2);
+        this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY);
         console.log(`stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
 
         this.placedHeight   = currentHeight + this.placeInterval;
+    }
+
+    // ジャンプ時の速度を計算
+    calcJumpVelocity(ringLv : number) {
+        return -450  - ringLv * 100;
     }
 
     // 登った高さ表示
