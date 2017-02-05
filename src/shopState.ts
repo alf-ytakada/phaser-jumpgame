@@ -30,11 +30,11 @@ class ShopState extends Phaser.State {
     init(data : any) {
         this.data   = data;
         this.headerHeight   = 30;
-        this.boxWidth  = this.stage.width - 40;
+        this.boxWidth  = this.game.width - 40;
         this.boxHeight = this.headerHeight + this.itemHeight * ShopItemDefs.length;
         //this.marginTop = (this.stage.height - this.boxHeight) / 2;
         this.marginTop = 100;
-        this.marginLeft = (this.stage.width - this.boxWidth) / 2;
+        this.marginLeft = (this.game.width - this.boxWidth) / 2;
     }
     preload() {
     }

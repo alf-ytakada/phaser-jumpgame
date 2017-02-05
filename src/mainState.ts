@@ -99,7 +99,7 @@ class MainState extends Phaser.State {
             .beginFill(0x999999)
             .drawRect(
                 0, 0,
-                100, 30
+                115, 30
             );
         this.climbHeightTextLayer   = this.add.sprite(0, 0, graphics.generateTexture());
         this.climbHeightText    = this.add.text(5, 5, "", {
@@ -124,11 +124,13 @@ class MainState extends Phaser.State {
 
         // 現在の資金表示
         this.showMoney();
+
+        // 日数表示
+        this.showDaySprite();
     }
 
     // メインループ
     update() {
-        //console.log("update()");
         // 死亡済み
         if (this.player.alive == false) {
             this.updateWhenDead();
@@ -254,14 +256,32 @@ class MainState extends Phaser.State {
         this.isJumping  = false;
         this.climbHeight    = 0;
         this.placeInterval  = 150; // px
-        this.placedHeight   = -this.stage.height;
+        this.placedHeight   = -this.game.height;
         this.climbHeight    = 0;
 
         // 初期床を配置
         this.placeStep(0, this.world.width, this.world.height, "stepStart");
-        for (let h = -this.stage.height + this.placeInterval ; h < 0 ; h++) {
+        for (let h = -this.game.height + this.placeInterval ; h < 0 ; h++) {
             this.placeClimbSteps(h);
         }
+    }
+
+    // 日付表示スプライト作成
+    showDaySprite() {
+        let text    = this.add.text(this.world.width + this.world.centerX, this.world.centerY, `Day: ${this.data.day}`, {
+            font: "44px Arial",
+            fill: "#c0a0ff",
+        });
+        text.anchor.setTo(0.5);
+
+        let textTween   = this.add.tween(text);
+        textTween
+            .to({x:this.world.centerX}, 700, Phaser.Easing.Bounce.Out) // 外から入ってくる
+            .to({}, 500, Phaser.Easing.Bounce.Out) // wait
+            .to({x:-this.world.centerX}, 500, Phaser.Easing.Bounce.Out) // 外に出ていく
+            ;
+        textTween.start();
+        return text;
     }
 
     // 床衝突時の処理
@@ -271,10 +291,12 @@ class MainState extends Phaser.State {
         if (step.data.length == 0) {
             return;
         }
+
+        // 特殊床の処理
         for (let effect of step.data) {
             // ジャンプ床
             if (effect === StepEffect.SpeedUp) {
-                this.player.body.velocity.y = 3 * this.calcJumpVelocity(this.data.item["ring"]);
+                this.player.body.velocity.y = 2.5 * this.calcJumpVelocity(this.data.item["ring"]);
             }
 
             // お金床
@@ -345,16 +367,16 @@ class MainState extends Phaser.State {
         }
 
         // 幅はランダムに
-        const stepWidth = this.rnd.integerInRange(this.stage.width / 6, this.stage.width / 2);
+        const stepWidth = this.rnd.integerInRange(this.game.width / 6, this.game.width / 2);
         // 置き始める座標
-        const stepLeftX = this.rnd.integerInRange(0, this.stage.width - stepWidth);
+        const stepLeftX = this.rnd.integerInRange(0, this.game.width - stepWidth);
         // 置くy座標
         let placeY      = 0;
         if (currentHeight < 0) {
             placeY      =  -currentHeight;
         }
         this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY);
-        console.log(`stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
+        console.log(`currentHeight: ${currentHeight}, stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
 
         this.placedHeight   = currentHeight + this.placeInterval;
     }
