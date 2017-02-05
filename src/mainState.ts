@@ -214,7 +214,7 @@ class MainState extends Phaser.State {
             // 登った高さ更新
             this.showHeight();
             // 適当なところでstepを削除
-            if (this.climbHeight % 100 == 0) {
+            if (Math.floor(this.climbHeight) % 100 == 0) {
                 for (let step of this.steps.children) {
                     if (! step.visible) {
                         this.steps.remove(step, true);
