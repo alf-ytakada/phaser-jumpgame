@@ -115,6 +115,7 @@ class MainState extends Phaser.State {
 
         // 床グループ生成
         this.steps  = this.add.group();
+        this.world.sendToBack(this.steps);
         this.steps.enableBody   = true;
         // その他初期化
         this.reset();
