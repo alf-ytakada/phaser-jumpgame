@@ -23,6 +23,9 @@ class PreloadState extends Phaser.State {
         for (let item of ShopItemDefs) {
             this.load.image(item.key, item.resource);
         }
+
+        // 背景
+        this.load.image("background", "images/background.png");
     }
 
     create() {

@@ -22,8 +22,8 @@ const ShopItemDefs : [ItemDef] = [
         resource    : "./images/大地の指輪.png",
         name        : "ゆびわ",
         description : "ジャンプ力が増加",
-        price       : 1000,
-        incremental : 500,
+        price       : 700,
+        incremental : 300,
         maxLevel    : 30,
     },
     {
@@ -41,9 +41,9 @@ const ShopItemDefs : [ItemDef] = [
         key : "talisman",
         resource    : "./images/罠除けの護符.png",
         name        : "おまもり",
-        description : "足場の広さが増加",
-        price       : 50000,
-        incremental : 10000,
+        description : "特殊床の出現率UP",
+        price       : 3000,
+        incremental : 1000,
         maxLevel    : 3,
     },
 ];

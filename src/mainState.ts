@@ -5,11 +5,22 @@ import {ShopItemDefs} from "./shopItemDefs";
 import {StepDefs, StepDef, StepEffect} from "./stepDefs";
 import {Common} from "./common";
 
+class State {
+    //　ゲーム状態
+    static IN_GAME : string = "IN_GAME";
+    // クリア状態
+    static CLEARED : string = "CLEARED";
+    // 死亡
+    static DEAD : string  = "DEAD";
+}
+
 class MainState extends Phaser.State {
     // 足場グループ
     steps:  Phaser.Group;
     // プレイヤー
     player: Phaser.Sprite;
+    // 背景
+    backgroundSprite: Phaser.Sprite;
     // 入力：カーソルキー
     cursors: Phaser.CursorKeys;
     // 入力：スペースバー
@@ -24,6 +35,7 @@ class MainState extends Phaser.State {
         money   : number,   // 資金
         item    : any,      // アイテムハッシュ
         day     : number,   // 日数
+        totalClimbHeight    : number,   // 総ジャンプ距離
     };
 
     // 文字列：登った高さ
@@ -42,8 +54,17 @@ class MainState extends Phaser.State {
     // ジャンプ中フラグ
     isJumping: boolean;
 
+    // クリアの高さ
+    clearHeight: number;
+    // クリア表示フラグ
+    isClearedShown: boolean;
+    // 状態
+    state: string;
+
     constructor() {
         super();
+        this.clearHeight    = 10000 * 100;
+        this.isClearedShown = false;
     }
 
     // init() -> preload() -> create()の順に呼び出され、
@@ -51,21 +72,23 @@ class MainState extends Phaser.State {
 
     // state 呼び出し時の引数が渡される
     init(data? : any) {
-        console.log("init()");
         if (data) {
             this.data   = data;
             this.data.day++;
         }
         else {
+            // 初回
             this.data   = {
-               money : 0,
-               item : {},
-               day  : 1,
+               money    : 1000,
+               item     : {},
+               day      : 1,
+               totalClimbHeight : 0,
             };
             for (let item of ShopItemDefs) {
                 this.data.item[item.key]    = 0;
             }
         }
+        this.state  = State.IN_GAME;
     }
 
     // おもにリソースファイルのダウンロードを行う
@@ -78,13 +101,16 @@ class MainState extends Phaser.State {
         console.log("create()");
         // 物理演算を有効化
         this.game.physics.startSystem(Phaser.Physics.ARCADE);
-        this.game.physics.arcade.checkCollision.down  = false;
-        //this.game.physics.arcade.gravity.y  = 300;
+        // 画面上下の衝突はOFFにする
+        this.game.physics.arcade.checkCollision.down    = false;
+        this.game.physics.arcade.checkCollision.up      = false;
 
         // キャラクターロード
         this.player = this.loadPlayer("chara1");
         this.player.body.gravity.y  = 500 - this.data.item["cloak"] * 20;
         this.player.body.collideWorldBounds = true;
+        // 最大速度制限を解除しておく
+        this.player.body.maxVelocity.y  = 100000;
 
         // キー入力
         this.cursors = this.input.keyboard.createCursorKeys();
@@ -128,15 +154,25 @@ class MainState extends Phaser.State {
 
         // 日数表示
         this.showDaySprite();
+
+        // 背景ロード
+        this.backgroundSprite   = this.add.sprite(0, this.world.height, "background");
+        this.backgroundSprite.sendToBack();
+        this.backgroundSprite.anchor.setTo(0, 1);
     }
 
     // メインループ
     update() {
         // 死亡済み
-        if (this.player.alive == false) {
+        if (this.state === State.DEAD) {
             this.updateWhenDead();
             return;
         }
+        // クリア済み
+        else if (this.state === State.CLEARED) {
+            this.updateWhenCleared();
+        }
+        // 生存中
         else {
             this.updateWhenAlive();
             return;
@@ -145,7 +181,6 @@ class MainState extends Phaser.State {
 
     // プレイヤー生存時
     updateWhenAlive() {
-        ////////////
         // 衝突判定
         this.physics.arcade.collide(this.player, this.steps, this.onCollideStep, null, this);
 
@@ -153,23 +188,31 @@ class MainState extends Phaser.State {
         if (this.player.y > this.world.height) {
             // 画面外に落ちた
             this.player.alive   = false;
+            this.state          = State.DEAD;
             const reward        = Math.floor(this.climbHeight / 10);
-            this.data.money += reward;
+            this.data.money     += reward;
+            this.data.totalClimbHeight  += this.climbHeight;
 
             // 結果ダイアログ生成
-            let dialog  = this.createResultDialog(this.game, {
+            let dialog  = this.createResultDialog({
                 climbHeight : sprintf("%.2f", this.climbHeight / 100),
                 reward      : reward,
                 state       : this,
-                onRetryClicked  : () => { console.log("retry clicked");},
             });
-            dialog.x    = (this.world.width - dialog.width)/2;
-            dialog.y    = (this.world.height - dialog.height)/2;
-            console.log(`width : ${dialog.width}, height : ${dialog.height}`);
+            dialog.x    = (this.world.width  - dialog.width ) /2;
+            dialog.y    = (this.world.height - dialog.height) /2;
             // ちょっとあとにダイアログを開く
             setTimeout(() => {
                 this.game.world.addChild(dialog);
             }, 500);
+        }
+
+        ////////////
+        // クリア判定
+        if (this.climbHeight >= this.clearHeight) {
+            this.data.totalClimbHeight  += this.climbHeight;
+            this.state  = State.CLEARED;
+            return;
         }
 
         ////////////
@@ -188,6 +231,12 @@ class MainState extends Phaser.State {
                 this.player.animations.stop();
             }
         }
+        // 減速機能
+        if (this.cursors.down.isDown) {
+            this.player.body.velocity.y += 50;
+            //this.player.body.velocity.y -= 1000;
+            console.log(this.player.body.velocity.y);
+        }
 
         if (this.spaceBar.isDown && this.isJumping == false) {
             let vel     = this.calcJumpVelocity(this.data.item["ring"]);
@@ -200,7 +249,6 @@ class MainState extends Phaser.State {
         }
         ////////////
 
-
         ////////////
         // ステージ生成
         this.placeClimbSteps(this.climbHeight);
@@ -208,7 +256,6 @@ class MainState extends Phaser.State {
 
         ////////////
         // カメラ移動
-        //console.log(`player.y = ${this.player.y}, camera.y = ${this.camera.y}, world.centerY = ${this.world.centerY}, climbHeight = ${this.climbHeight}`);
         if (this.player.y < this.world.centerY) {
             const offsetY : number  = this.world.centerY - this.player.y;
             this.climbHeight+= offsetY;
@@ -224,22 +271,35 @@ class MainState extends Phaser.State {
                     }
                 }
             }
+            // 背景ずらす
+            this.backgroundSprite.y =
+                this.world.height + 
+                (this.backgroundSprite.height - this.world.height) * (this.climbHeight / 100 / 10100);
+        }
+    }
+
+    // クリア時のupdate()
+    updateWhenCleared() {
+        if (this.isClearedShown) {
+            return;
         }
 
-        ////////////
+        // クリア時の表示
+        this.showClearedText();
+        this.showClearedScore();
+
+        this.isClearedShown = true;
     }
 
     // プレイヤー死亡時のupdate()
     updateWhenDead() {
         // ダイアログ処理
         if (this.rKey.isDown) {
-            // ゲーム初期化して最初から
-           // this.reset();
+           // 最初からやり直す
             this.game.state.start("mainState", true, false, this.data);
         }
         else if (this.sKey.isDown) {
             // ショップへ
-            // test
             this.data.money += 100000;
             this.game.state.start("shopState", true, false, this.data);
         }
@@ -270,8 +330,8 @@ class MainState extends Phaser.State {
     // 日付表示スプライト作成
     showDaySprite() {
         let text    = this.add.text(this.world.width + this.world.centerX, this.world.centerY, `Day: ${this.data.day}`, {
-            font: "44px Arial",
-            fill: "#c0a0ff",
+            font: "bold 60px Arial",
+            fill: "greenyellow",
         });
         text.anchor.setTo(0.5);
 
@@ -312,9 +372,9 @@ class MainState extends Phaser.State {
     loadPlayer(spriteName : string) : Phaser.Sprite {
         let sprite  = this.add.sprite(this.world.centerX, this.world.centerY, spriteName, 2);
         sprite.anchor.setTo(0.5, 0.5);
-        sprite.animations.add("left", [3, 4, 5, 4], 10, true);
+        sprite.animations.add("left",  [3, 4, 5, 4], 10, true);
         sprite.animations.add("right", [6, 7, 8, 7], 10, true);
-        sprite.animations.add("jump", [0, 1, 2, 1], 30, true);
+        sprite.animations.add("jump",  [0, 1, 2, 1], 30, true);
 
         this.game.physics.arcade.enable(sprite);
 
@@ -326,13 +386,13 @@ class MainState extends Phaser.State {
         let posX    = leftX;
         do {
             // 指定がなければランダム選択
-            let stepDef = this.choiceStep(stepKey);
-            let step : Phaser.Sprite    = this.steps.create(posX, y, stepDef.key);
+            const stepDef   = this.choiceStep(stepKey);
+            const step : Phaser.Sprite    = this.steps.create(posX, y, stepDef.key);
             step.data   = stepDef.effect;
             step.anchor.setTo(0.5, 0.5);
             step.outOfBoundsKill    = true;
             step.checkWorldBounds   = true;
-            step.body.immovable = true;
+            step.body.immovable     = true;
             step.body.checkCollision.down   = false;
             posX    += step.width;
 
@@ -340,6 +400,7 @@ class MainState extends Phaser.State {
     }
 
     // 床を選択 指定がなければランダム
+    // タリスマン所持で、特殊床の出現率UP
     choiceStep(stepKey? :string) : StepDef {
         if (stepKey) {
             return (StepDefs.map((step) => {
@@ -351,12 +412,19 @@ class MainState extends Phaser.State {
         let rndMax  = 0;
         for (let step of StepDefs) {
             rndMax  += step.rate;
+            if (step.key != "stepNormal") {
+                rndMax  += step.rate * 2 * this.data.item["talisman"];
+            }
         }
         for (let step of StepDefs) {
-            if (this.rnd.realInRange(0, rndMax) < step.rate) {
+            let rate    = step.rate;
+            if (step.key != "stepNormal") {
+                rate    += step.rate * 2 * this.data.item["talisman"];
+            }
+            if (this.rnd.realInRange(0, rndMax) < rate) {
                 return step;
             }
-            rndMax  -= step.rate;
+            rndMax  -= rate;
         }
         throw "oops, cannot find proper step!";
     }
@@ -367,8 +435,11 @@ class MainState extends Phaser.State {
             return;
         }
 
-        // 幅はランダムに
-        const stepWidth = this.rnd.integerInRange(this.game.width / 6, this.game.width / 2);
+        // 床の幅はランダム(タリスマンレベルに応じて広くする)
+        const stepWidth = this.rnd.integerInRange(
+            this.game.width / 6, 
+            this.game.width / 2
+        );
         // 置き始める座標
         const stepLeftX = this.rnd.integerInRange(0, this.game.width - stepWidth);
         // 置くy座標
@@ -379,7 +450,12 @@ class MainState extends Phaser.State {
         this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY);
         console.log(`currentHeight: ${currentHeight}, stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
 
-        this.placedHeight   = currentHeight + this.placeInterval;
+        this.placedHeight   = currentHeight + this.calcPlaceInterval(currentHeight);
+    }
+
+    // 床の配置高さ間隔計算。　高いほど間隔を長くする
+    calcPlaceInterval(height:  number) {
+        return 150 + height / 1000;
     }
 
     // ジャンプ時の速度を計算
@@ -398,15 +474,15 @@ class MainState extends Phaser.State {
     }
 
     // 結果ダイアログ作成
-    createResultDialog(game : Phaser.Game, conf : any) : Phaser.Sprite {
+    createResultDialog(conf : any) : Phaser.Sprite {
         // 枠
-        let graphics    = game.make.graphics();
-        graphics.lineStyle(5, 0x666666);
-        graphics.beginFill(0xaaaaaa);
+        let graphics    = this.make.graphics();
+        graphics.lineStyle(5, 0x0);
+        graphics.beginFill(0xffffff);
         graphics.drawRect(
             0, 0,
-            game.world.width - game.world.width / 4, 
-            game.world.height - game.world.height / 4 
+            this.world.width - this.world.width / 4, 
+            this.world.height - this.world.height / 2 
         );
         let sprite  = this.make.sprite(0, 0, graphics.generateTexture());
 
@@ -415,21 +491,21 @@ class MainState extends Phaser.State {
             font    : "bold 24px Arial",
             fill    : "#222",
         };
-        let scoreText   = game.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
+        let scoreText   = this.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
         sprite.addChild(scoreText);
 
-        let rewardText  = game.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
+        let rewardText  = this.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
         sprite.addChild(rewardText);
 
         // ボタンの縦横幅
         const buttonWidth   = sprite.width / 1.5;
-        const buttonHeight  = sprite.height / 10;
+        const buttonHeight  = sprite.height / 6;
         
         //// リトライボタン
         let retryButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xcccccc);
         retryButton.x   = (sprite.width - retryButton.width) / 2;
         retryButton.y   = 100;
-        let retryText   = game.make.text(retryButton.width/2, retryButton.height/2, `R key : 再挑戦`, style);
+        let retryText   = this.make.text(retryButton.width/2, retryButton.height/2, `再挑戦`, style);
         retryText.anchor.setTo(0.5);
         retryButton.addChild(retryText);
         retryButton.events.onInputDown.add(() => {
@@ -438,10 +514,10 @@ class MainState extends Phaser.State {
         sprite.addChild(retryButton);
 
         //// ショップボタン
-        let shopButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xffcccc);
+        let shopButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0x88ff88);
         shopButton.x   = (sprite.width - shopButton.width) / 2;
         shopButton.y   = 170;
-        let shopText   = game.make.text(shopButton.width/2, shopButton.height/2, `ショップへ`, style);
+        let shopText   = this.make.text(shopButton.width/2, shopButton.height/2, `ショップへ`, style);
         shopText.anchor.setTo(0.5);
         shopButton.addChild(shopText);
         shopButton.events.onInputDown.add(() => {
@@ -450,6 +526,58 @@ class MainState extends Phaser.State {
         sprite.addChild(shopButton);
 
         return sprite;
+    }
+
+    // クリアテキスト
+    showClearedText() {
+        // テキスト
+        const style     = {
+            font    : "bold 44px Arial",
+            fill    : "gold",
+        };
+        const text  = this.add.text(
+            this.world.width / 2,
+            this.world.height / 6,
+            `C L E A R ! ! !`,
+        style);
+        text.anchor.setTo(0.5);
+    }
+
+    // クリアスコア
+    showClearedScore() {
+        // 枠
+        const graphics    = this.make.graphics();
+        graphics.lineStyle(2, 0x0);
+        graphics.beginFill(0xffffff);
+        graphics.drawRect(
+            0, 0,
+            this.world.width  - this.world.width / 8 * 2, 
+            this.world.height /  6
+        );
+        const sprite  = this.make.sprite(
+            this.world.width / 8,
+            this.world.height - this.world.height / 6 * 2,
+            graphics.generateTexture()
+        );
+        this.world.addChild(sprite);
+
+        // テキスト
+        const style     = {
+            font    : "bold 18px Arial",
+            fill    : "black",
+        };
+        let text  = this.make.text(
+            10, 10, 
+            `クリア日数 : ${this.data.day} 日`,
+            style
+        );
+        sprite.addChild(text);
+        text  = this.make.text(
+            10, 40, 
+            `総ジャンプ距離 : ${sprintf("%.2f", this.data.totalClimbHeight / 100)} M`,
+            style
+        );
+        sprite.addChild(text);
     }
 
 }
