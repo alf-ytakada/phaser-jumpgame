@@ -1,10 +1,12 @@
-/// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
+/// <reference path="../node_modules/phaser/typescript/phaser.d.ts" />
+/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
 
 import {sprintf} from "sprintf-js";
 import {ShopItemDefs} from "./shopItemDefs";
 import {StepDefs, StepDef, StepEffect} from "./stepDefs";
 import {Common} from "./common";
 
+/// このStateでのゲーム状態一覧
 class State {
     //　ゲーム状態
     static IN_GAME : string = "IN_GAME";
@@ -30,19 +32,17 @@ class MainState extends Phaser.State {
     // 入力：Sキー
     sKey: Phaser.Key;
 
-    // データハッシュ
+    // 各Stateに引き回すデータオブジェクト
     data : {
         money   : number,   // 資金
-        item    : any,      // アイテムハッシュ
+        item    : any,      // アイテムオブジェクト
         day     : number,   // 日数
         totalClimbHeight    : number,   // 総ジャンプ距離
     };
 
     // 文字列：登った高さ
-    climbHeightTextLayer: Phaser.Sprite;
     climbHeightText: Phaser.Text;
     // 文字列：資金
-    moneyTextLayer: Phaser.Sprite;
     moneyText: Phaser.Text;
 
     // 登った距離
@@ -73,6 +73,7 @@ class MainState extends Phaser.State {
     // state 呼び出し時の引数が渡される
     init(data? : any) {
         if (data) {
+            // 2回目以降
             this.data   = data;
             this.data.day++;
         }
@@ -113,31 +114,15 @@ class MainState extends Phaser.State {
         this.player.body.maxVelocity.y  = 100000;
 
         // キー入力
-        this.cursors = this.input.keyboard.createCursorKeys();
+        this.cursors    = this.input.keyboard.createCursorKeys();
         this.spaceBar   = this.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
-        this.rKey    = this.input.keyboard.addKey(Phaser.Keyboard.R);
-        this.sKey    = this.input.keyboard.addKey(Phaser.Keyboard.S);
+        this.rKey       = this.input.keyboard.addKey(Phaser.Keyboard.R);
+        this.sKey       = this.input.keyboard.addKey(Phaser.Keyboard.S);
 
-        ///////////////////
-        // 文字列関係初期化
-        let graphics   = this.make.graphics(0, 0);
-        graphics.lineStyle(1, 0xffffff)
-            .beginFill(0x999999)
-            .drawRect(
-                0, 0,
-                115, 30
-            );
-        this.climbHeightTextLayer   = this.add.sprite(0, 0, graphics.generateTexture());
-        this.climbHeightText    = this.add.text(5, 5, "", {
-            font: "20px Arial",
-            fill: "#ffffff",
-        });
-        this.climbHeightTextLayer.addChild(this.climbHeightText);
-        graphics.destroy();
-
+        // 登った距離表示
+        this.climbHeightText    = this.addClimbSprite();
         // 所持金表示
-        this.moneyText  = Common.addMoneySprite(this.game);
-        ///////////////////
+        this.moneyText          = Common.addMoneySprite(this.game);
 
         // 床グループ生成
         this.steps  = this.add.group();
@@ -344,6 +329,27 @@ class MainState extends Phaser.State {
         textTween.start();
         return text;
     }
+
+    // 登った距離スプライト作成
+    addClimbSprite() {
+        const graphics   = this.make.graphics(0, 0);
+        graphics.lineStyle(1, 0xffffff)
+            .beginFill(0x999999)
+            .drawRect(
+                0, 0,
+                115, 30
+            );
+        // 登った距離の表示
+        const climbHeightTextLayer   = this.add.sprite(0, 0, graphics.generateTexture());
+        const text  = this.add.text(5, 5, "", {
+            font: "20px Arial",
+            fill: "#ffffff",
+        });
+        climbHeightTextLayer.addChild(text);
+        graphics.destroy();
+        return text;
+    }
+
 
     // 床衝突時の処理
     onCollideStep(player : Phaser.Sprite, step : Phaser.Sprite) {

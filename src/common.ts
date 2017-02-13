@@ -1,4 +1,4 @@
-/// <reference path="../node_modules/phaser/typescript/phaser.d.ts"/// <reference path="../node_modules/@types/sprintf-js/index.d.ts"/>
+/// <reference path="../node_modules/phaser/typescript/phaser.d.ts" />
 // 共通で使うもの
 
 class Common {
