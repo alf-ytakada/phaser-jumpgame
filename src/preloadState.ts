@@ -25,7 +25,7 @@ class PreloadState extends Phaser.State {
         }
 
         // 背景
-        this.load.image("background", "images/background.png");
+        this.load.image("background", "images/background.jpg");
     }
 
     create() {
