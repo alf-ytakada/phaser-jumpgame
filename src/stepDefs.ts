@@ -1,5 +1,4 @@
-
-// 踏み台の定義
+// 床の定義
 
 interface StepDef {
     id          : number;
@@ -8,6 +7,7 @@ interface StepDef {
     rate        : number;   // 出現率 : 0-1
     effect      : [string]; // 効果一覧
 };
+
 const StepEffect    = {
     "SpeedUp"   : "SpeedUp",
     "Money"     : "Money",

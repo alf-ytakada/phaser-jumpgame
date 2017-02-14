@@ -4,7 +4,7 @@
 class Common {
     // お金表示部の生成
     static addMoneySprite(game : Phaser.Game) : Phaser.Text {
-        let graphics    = game.make.graphics();
+        const graphics    = game.make.graphics();
         graphics
             .lineStyle(1, 0xffffff)
             .beginFill(0x999999)
@@ -12,7 +12,7 @@ class Common {
                 0, 0,
                 100, 30
             );
-        let sprite  = game.add.sprite(game.world.width, 0, graphics.generateTexture());
+        const sprite  = game.add.sprite(game.world.width, 0, graphics.generateTexture());
         graphics.destroy();
         sprite.anchor.setTo(1, 0);
         let moneyText    = game.make.text(0, 5, "", {
@@ -27,11 +27,11 @@ class Common {
 
     // 単色ボタンの生成
     static createButton(game : Phaser.Game, width: number, height: number, color: number) : Phaser.Sprite {
-        let graphics   = game.make.graphics();
+        const graphics   = game.make.graphics();
         graphics.beginFill(color);
         graphics.drawRect(0, 0, width, height);
         graphics.endFill();
-        let sprite     = game.make.sprite(0, 0, graphics.generateTexture());
+        const sprite     = game.make.sprite(0, 0, graphics.generateTexture());
         sprite.inputEnabled = true;
         sprite.input.useHandCursor  = true;
 

@@ -53,28 +53,28 @@ class ShopState extends Phaser.State {
             this.shopSprite.destroy();
         }
         // UI作成
-        let graphics    = this.make.graphics();
+        const graphics  = this.make.graphics();
         graphics.lineStyle(1, 0xffffff);
         graphics.drawRect(0, 0, this.boxWidth, this.boxHeight);
         graphics.moveTo(0, this.headerHeight);
         graphics.lineTo(this.boxWidth, this.headerHeight);
         graphics.endFill();
 
-        let sprite  = this.add.sprite(this.marginLeft, this.marginTop, graphics.generateTexture());
+        const sprite    = this.add.sprite(this.marginLeft, this.marginTop, graphics.generateTexture());
         graphics.destroy();
         // テキスト
-        const style     = {
+        const style = {
             font    : "bold 18px Arial",
             fill    : "#FFF",
         };
-        let text    = this.make.text(this.boxWidth / 2, 3, "アイテムショップ", style);
+        const text  = this.make.text(this.boxWidth / 2, 3, "アイテムショップ", style);
         text.anchor.setTo(0.5, 0);
         sprite.addChild(text);
 
         // アイテム一覧
         for (let i = 0 ; i < ShopItemDefs.length ; i++) {
-            const item  = ShopItemDefs[i];
-            let itemSprite  = this.createItemRow(item);
+            const item      = ShopItemDefs[i];
+            const itemSprite = this.createItemRow(item);
             itemSprite.y    = this.headerHeight + (i * this.itemHeight);
             sprite.addChild(itemSprite);
         }
@@ -172,21 +172,21 @@ class ShopState extends Phaser.State {
 
     // 下部メニュー描画
     drawMenu() {
-        let graphics    = this.make.graphics();
+        const graphics    = this.make.graphics();
         graphics.lineStyle(1, 0xCCCCCC);
         graphics.beginFill(0xaaaaaa);
         graphics.drawRect(0, 0, this.boxWidth, this.itemHeight);
         graphics.endFill();
 
-        let sprite  = this.add.sprite(
+        const sprite  = this.add.sprite(
             this.marginLeft, this.marginTop + this.boxHeight + 50, graphics.generateTexture()
         );
 
-        let style   = {
+        const style   = {
             font    : "bold 22px Arial",
             fill    : "#000000",
         };
-        let text    = this.make.text(sprite.width / 2, sprite.height / 2, "次の日へ進む", style);
+        const text    = this.make.text(sprite.width / 2, sprite.height / 2, "次の日へ進む", style);
         text.anchor.setTo(0.5);
         sprite.addChild(text);
 

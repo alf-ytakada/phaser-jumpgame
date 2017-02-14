@@ -138,9 +138,11 @@ class MainState extends Phaser.State {
         this.showMoney();
 
         // 日数表示
-        this.showDaySprite();
+        this.showDayAnimation();
 
         // 背景ロード
+        // 背景は、登った距離に応じてずらす。
+        // 左下を起点に設定する
         this.backgroundSprite   = this.add.sprite(0, this.world.height, "background");
         this.backgroundSprite.sendToBack();
         this.backgroundSprite.anchor.setTo(0, 1);
@@ -151,7 +153,6 @@ class MainState extends Phaser.State {
         // 死亡済み
         if (this.state === State.DEAD) {
             this.updateWhenDead();
-            return;
         }
         // クリア済み
         else if (this.state === State.CLEARED) {
@@ -160,13 +161,12 @@ class MainState extends Phaser.State {
         // 生存中
         else {
             this.updateWhenAlive();
-            return;
         }
     }
 
     // プレイヤー生存時
     updateWhenAlive() {
-        // 衝突判定
+        // キャラと床の衝突判定
         this.physics.arcade.collide(this.player, this.steps, this.onCollideStep, null, this);
 
         // 死亡判定
@@ -179,7 +179,7 @@ class MainState extends Phaser.State {
             this.data.totalClimbHeight  += this.climbHeight;
 
             // 結果ダイアログ生成
-            let dialog  = this.createResultDialog({
+            const dialog  = this.createResultDialog({
                 climbHeight : sprintf("%.2f", this.climbHeight / 100),
                 reward      : reward,
                 state       : this,
@@ -190,6 +190,7 @@ class MainState extends Phaser.State {
             setTimeout(() => {
                 this.game.world.addChild(dialog);
             }, 500);
+            return;
         }
 
         ////////////
@@ -219,12 +220,11 @@ class MainState extends Phaser.State {
         // 減速機能
         if (this.cursors.down.isDown) {
             this.player.body.velocity.y += 50;
-            //this.player.body.velocity.y -= 1000;
-            console.log(this.player.body.velocity.y);
         }
 
+        // ジャンプ
         if (this.spaceBar.isDown && this.isJumping == false) {
-            let vel     = this.calcJumpVelocity(this.data.item["ring"]);
+            const vel   = this.calcJumpVelocity(this.data.item["ring"]);
             // 上に登るので、負の値となる。ので、現在の速度が新速度より大きければ、新しい速度に更新する
             if (this.player.body.velocity.y > vel) {
                 this.player.body.velocity.y  = vel;
@@ -235,20 +235,22 @@ class MainState extends Phaser.State {
         ////////////
 
         ////////////
-        // ステージ生成
+        // 床生成
         this.placeClimbSteps(this.climbHeight);
         ////////////
 
         ////////////
         // カメラ移動
         if (this.player.y < this.world.centerY) {
-            const offsetY : number  = this.world.centerY - this.player.y;
-            this.climbHeight+= offsetY;
-            this.player.y   = this.world.centerY;
+            // キャラは基本的に画面真ん中に位置するように座標を修正する
+            const offsetY       = this.world.centerY - this.player.y;
+            this.climbHeight    += offsetY;
+            this.player.y       = this.world.centerY;
+            // 床にもy増分を加算する。第５引数が1の場合、加算処理を行う
             this.steps.setAll("y", offsetY, false, false, 1);
-            // 登った高さ更新
+            // 登った高さの表示更新
             this.showHeight();
-            // 適当なところでstepを削除
+            // 適当なところで、見えない床を削除
             if (Math.floor(this.climbHeight) % 100 == 0) {
                 for (let step of this.steps.children) {
                     if (! step.visible) {
@@ -257,9 +259,11 @@ class MainState extends Phaser.State {
                 }
             }
             // 背景ずらす
+            // 登った距離がclearHeightのときに、画像上端を画面上端に合うようにしている
+            // (実際はすこし遊びを持たせている)
             this.backgroundSprite.y =
                 this.world.height + 
-                (this.backgroundSprite.height - this.world.height) * (this.climbHeight / 100 / 10100);
+                (this.backgroundSprite.height - this.world.height) * (this.climbHeight / (this.clearHeight + 10000));
         }
     }
 
@@ -294,12 +298,13 @@ class MainState extends Phaser.State {
     //  その他メソッド
     ////////////////////////////////////
 
+    // 諸々初期化
     reset() {
         this.steps.removeAll(true);
         this.player.alive   = true;
 
         // メタデータ初期化
-        this.isJumping  = false;
+        this.isJumping      = false;
         this.climbHeight    = 0;
         this.placeInterval  = 150; // px
         this.placedHeight   = -this.game.height;
@@ -313,7 +318,7 @@ class MainState extends Phaser.State {
     }
 
     // 日付表示スプライト作成
-    showDaySprite() {
+    showDayAnimation() {
         let text    = this.add.text(this.world.width + this.world.centerX, this.world.centerY, `Day: ${this.data.day}`, {
             font: "bold 60px Arial",
             fill: "greenyellow",
@@ -327,11 +332,10 @@ class MainState extends Phaser.State {
             .to({x:-this.world.centerX}, 500, Phaser.Easing.Bounce.Out) // 外に出ていく
             ;
         textTween.start();
-        return text;
     }
 
     // 登った距離スプライト作成
-    addClimbSprite() {
+    addClimbSprite() : Phaser.Text {
         const graphics   = this.make.graphics(0, 0);
         graphics.lineStyle(1, 0xffffff)
             .beginFill(0x999999)
@@ -351,7 +355,7 @@ class MainState extends Phaser.State {
     }
 
 
-    // 床衝突時の処理
+    // キャラと床衝突時の処理
     onCollideStep(player : Phaser.Sprite, step : Phaser.Sprite) {
         this.player.animations.stop("jump");
         this.isJumping   = false;
@@ -375,8 +379,9 @@ class MainState extends Phaser.State {
         step.data   = [];
     }
 
+    // プレイヤーキャラのスプライト作成
     loadPlayer(spriteName : string) : Phaser.Sprite {
-        let sprite  = this.add.sprite(this.world.centerX, this.world.centerY, spriteName, 2);
+        const sprite  = this.add.sprite(this.world.centerX, this.world.centerY, spriteName, 2);
         sprite.anchor.setTo(0.5, 0.5);
         sprite.animations.add("left",  [3, 4, 5, 4], 10, true);
         sprite.animations.add("right", [6, 7, 8, 7], 10, true);
@@ -387,14 +392,14 @@ class MainState extends Phaser.State {
         return sprite;
     }
 
-    //　床配置
-    placeStep(leftX : number, rightX : number, y : number, stepKey? : string)  : void {
+    //　指定した左端から、指定した右端まで床を配置する
+    placeStep(leftX : number, rightX : number, y : number, stepKey? : string) {
         let posX    = leftX;
         do {
             // 指定がなければランダム選択
             const stepDef   = this.choiceStep(stepKey);
             const step : Phaser.Sprite    = this.steps.create(posX, y, stepDef.key);
-            step.data   = stepDef.effect;
+            step.data       = stepDef.effect;
             step.anchor.setTo(0.5, 0.5);
             step.outOfBoundsKill    = true;
             step.checkWorldBounds   = true;
@@ -402,10 +407,10 @@ class MainState extends Phaser.State {
             step.body.checkCollision.down   = false;
             posX    += step.width;
 
-        } while(posX <= rightX);
+        } while (posX <= rightX);
     }
 
-    // 床を選択 指定がなければランダム
+    // 床の種類を選択 指定がなければランダム
     // タリスマン所持で、特殊床の出現率UP
     choiceStep(stepKey? :string) : StepDef {
         if (stepKey) {
@@ -435,13 +440,13 @@ class MainState extends Phaser.State {
         throw "oops, cannot find proper step!";
     }
 
-    // 上り床配置
+    // 高さに応じて、床配置
     placeClimbSteps(currentHeight: number) {
         if (this.placedHeight >= currentHeight) {
             return;
         }
 
-        // 床の幅はランダム(タリスマンレベルに応じて広くする)
+        // 床の幅はランダム
         const stepWidth = this.rnd.integerInRange(
             this.game.width / 6, 
             this.game.width / 2
@@ -454,18 +459,17 @@ class MainState extends Phaser.State {
             placeY      =  -currentHeight;
         }
         this.placeStep(stepLeftX, stepLeftX + stepWidth, placeY);
-        console.log(`currentHeight: ${currentHeight}, stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
-
+        //console.log(`currentHeight: ${currentHeight}, stepWidth:${stepWidth}, stepLeftX:${stepLeftX}, placeY:${placeY}`);
         this.placedHeight   = currentHeight + this.calcPlaceInterval(currentHeight);
     }
 
     // 床の配置高さ間隔計算。　高いほど間隔を長くする
-    calcPlaceInterval(height:  number) {
+    calcPlaceInterval(height:  number) : number {
         return 150 + height / 1000;
     }
 
     // ジャンプ時の速度を計算
-    calcJumpVelocity(ringLv : number) {
+    calcJumpVelocity(ringLv : number) : number {
         return -450  - ringLv * 100;
     }
 
@@ -482,7 +486,7 @@ class MainState extends Phaser.State {
     // 結果ダイアログ作成
     createResultDialog(conf : any) : Phaser.Sprite {
         // 枠
-        let graphics    = this.make.graphics();
+        const graphics    = this.make.graphics();
         graphics.lineStyle(5, 0x0);
         graphics.beginFill(0xffffff);
         graphics.drawRect(
@@ -490,17 +494,17 @@ class MainState extends Phaser.State {
             this.world.width - this.world.width / 4, 
             this.world.height - this.world.height / 2 
         );
-        let sprite  = this.make.sprite(0, 0, graphics.generateTexture());
+        const sprite  = this.make.sprite(0, 0, graphics.generateTexture());
 
         // テキスト
         const style     = {
             font    : "bold 24px Arial",
             fill    : "#222",
         };
-        let scoreText   = this.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
+        const scoreText   = this.make.text(10, 10, `高度 : ${conf.climbHeight} M`, style);
         sprite.addChild(scoreText);
 
-        let rewardText  = this.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
+        const rewardText  = this.make.text(10, 40, `獲得賞金 : ${conf.reward} G`, style);
         sprite.addChild(rewardText);
 
         // ボタンの縦横幅
@@ -508,10 +512,10 @@ class MainState extends Phaser.State {
         const buttonHeight  = sprite.height / 6;
         
         //// リトライボタン
-        let retryButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xcccccc);
+        const retryButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0xcccccc);
         retryButton.x   = (sprite.width - retryButton.width) / 2;
         retryButton.y   = 100;
-        let retryText   = this.make.text(retryButton.width/2, retryButton.height/2, `再挑戦`, style);
+        const retryText   = this.make.text(retryButton.width/2, retryButton.height/2, `再挑戦`, style);
         retryText.anchor.setTo(0.5);
         retryButton.addChild(retryText);
         retryButton.events.onInputDown.add(() => {
@@ -520,10 +524,10 @@ class MainState extends Phaser.State {
         sprite.addChild(retryButton);
 
         //// ショップボタン
-        let shopButton = Common.createButton(this.game, buttonWidth, buttonHeight, 0x88ff88);
-        shopButton.x   = (sprite.width - shopButton.width) / 2;
-        shopButton.y   = 170;
-        let shopText   = this.make.text(shopButton.width/2, shopButton.height/2, `ショップへ`, style);
+        const shopButton    = Common.createButton(this.game, buttonWidth, buttonHeight, 0x88ff88);
+        shopButton.x        = (sprite.width - shopButton.width) / 2;
+        shopButton.y        = 170;
+        const shopText      = this.make.text(shopButton.width/2, shopButton.height/2, `ショップへ`, style);
         shopText.anchor.setTo(0.5);
         shopButton.addChild(shopText);
         shopButton.events.onInputDown.add(() => {
@@ -534,7 +538,7 @@ class MainState extends Phaser.State {
         return sprite;
     }
 
-    // クリアテキスト
+    // クリア時のテキスト表示
     showClearedText() {
         // テキスト
         const style     = {
@@ -549,7 +553,7 @@ class MainState extends Phaser.State {
         text.anchor.setTo(0.5);
     }
 
-    // クリアスコア
+    // クリアスコア表示
     showClearedScore() {
         // 枠
         const graphics    = this.make.graphics();
