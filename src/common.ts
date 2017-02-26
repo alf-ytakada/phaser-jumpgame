@@ -28,6 +28,7 @@ class Common {
     // 単色ボタンの生成
     static createButton(game : Phaser.Game, width: number, height: number, color: number) : Phaser.Sprite {
         const graphics   = game.make.graphics();
+        graphics.lineStyle(1, 0);
         graphics.beginFill(color);
         graphics.drawRect(0, 0, width, height);
         graphics.endFill();
